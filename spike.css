@@ -60,7 +60,7 @@ div {
     font-size: 16pt;
     font-family: 'Miltonian', cursive;
 }
-#objectives ol {
+ol#objectives {
     list-style:lower-roman inside;
 }
 #objectives li.met {
