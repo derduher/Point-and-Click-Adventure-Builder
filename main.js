@@ -32,6 +32,38 @@
 	var Objectives = Backbone.Collection.extend({
 		model: Objective
 	});
+
+	var ObjectiveView = Backbone.View.extend({
+		tagname: 'li',
+		initialize: function () {
+			_.bindAll(this,'render');
+		},
+		render: function () {
+			$(this.el).text(this.model.get('objectiveTitle'));
+			return this;
+		}
+	});
+
+	var ObjectivesListView = Backbone.View.extend({
+		id: 'objectives',
+		tagname: 'ol',
+		initialize: function () {
+			//TODO: figure out how to take in an argument
+			this.collection = new Objectives();
+			this.collection.bind('add',this.appendObjective);
+			_.bindAll(this,'render','appendObjective');
+		},
+		render: function () {
+			_(this.collection.models).each(function (objective) {
+				appendObjective(objective);
+			});
+		},
+		appendObjective: function (objective) {
+			var objectiveView = new ObjectiveView({model: objective});
+			$(this.el).append(objectiveView.render().el);
+		}
+	});
+	
 	theobjectives2 = new Objectives(theObjectivescol);
 
 		blah = new Objective({eventTitle:'dooropened', objectiveId: 'opendoor'});
