@@ -1,9 +1,40 @@
 ﻿$(function() {
-    var theObjectives = {
-        'dooropened': 'opendoor',
-        'keypickedup': 'pickupkey',
-        'doorunlocked': 'unlockdoor'
-    };
+	var theObjectives = {
+		'dooropened': 'opendoor',
+		'keypickedup': 'pickupkey',
+		'doorunlocked': 'unlockdoor'
+	};
+	var theObjectivescol = [
+		{objectiveTitle: 'open door', id: 'opendoor'},
+		{objectiveTitle: 'pick up key', id: 'pickupkey'},
+		{objectiveTitle: 'unlock door', id: 'unlockdoor'}
+	];
+
+	var Objective = Backbone.Model.extend({
+		defaults: {
+			// The short text of the objective
+			objectiveTitle: false,
+			// The unique identifier for the objective
+			id: false
+		},
+		complete: (function() {
+			var isComplete = false;
+			return function (state) {
+				if (state !== undefined && state !== null) {
+					isComplete = state;
+					return this;
+				}
+				return isComplete;
+			};
+		})()
+	});
+
+	var Objectives = Backbone.Collection.extend({
+		model: Objective
+	});
+	theobjectives2 = new Objectives(theObjectivescol);
+
+		blah = new Objective({eventTitle:'dooropened', objectiveId: 'opendoor'});
     var items = {
         'key': {
             'type': 'inventory',
