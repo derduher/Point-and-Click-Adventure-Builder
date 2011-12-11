@@ -1,13 +1,8 @@
 ﻿$(function() {
-	var theObjectives = {
-		'dooropened': 'opendoor',
-		'keypickedup': 'pickupkey',
-		'doorunlocked': 'unlockdoor'
-	};
-	var theObjectivescol = [
-		{objectiveTitle: 'open door', id: 'opendoor'},
-		{objectiveTitle: 'pick up key', id: 'pickupkey'},
-		{objectiveTitle: 'unlock door', id: 'unlockdoor'}
+	var theObjectives = [
+		{objectiveTitle: 'open door', id: 'opendoor', order: 3},
+		{objectiveTitle: 'pick up key', id: 'pickupkey', order: 1},
+		{objectiveTitle: 'unlock door', id: 'unlockdoor', order: 2}
 	];
 
 	var Objective = Backbone.Model.extend({
@@ -17,20 +12,27 @@
 			// The unique identifier for the objective
 			id: false
 		},
-		complete: (function() {
-			var isComplete = false;
-			return function (state) {
-				if (state !== undefined && state !== null) {
-					isComplete = state;
-					return this;
-				}
-				return isComplete;
-			};
-		})()
+			//TODO: figure out how to make this private
+		isComplete : false,
+		markComplete: function () {
+			console.log('here');
+			isComplete = true;
+			return this;
+		},
+		complete: function (state) {
+			if (state !== undefined && state !== null) {
+				isComplete = state;
+				return this;
+			}
+			return isComplete;
+		}
 	});
 
 	var Objectives = Backbone.Collection.extend({
-		model: Objective
+		model: Objective,
+		comparator: function (objective) {
+			return objective.get('order');
+		}
 	});
 
 	var ObjectiveView = Backbone.View.extend({
@@ -41,6 +43,9 @@
 		},
 		render: function () {
 			$(this.el).text(this.model.get('objectiveTitle'));
+			if (this.model.isComplete) {
+				$(this.el).addClass('met');
+			}
 			return this;
 		}
 	});
@@ -67,15 +72,15 @@
 		}
 	});
 	
-	theobjectives2 = new Objectives(theObjectivescol);
-	theobjectivesview = new ObjectivesListView({el:'#objectives', objectives: theobjectives2});
+	theobjectives = new Objectives(theObjectives);
+	theobjectivesview = new ObjectivesListView({el:'#objectives', objectives: theobjectives});
 	$('body').append(theobjectivesview);
+	
 
-		blah = new Objective({eventTitle:'dooropened', objectiveId: 'opendoor'});
     var items = {
         'key': {
             'type': 'inventory',
-            'pickup': 'keypickedup'
+            'pickup': 'pickupkey'
         },
         'door': {
             'type': 'interactable',
@@ -111,6 +116,44 @@
             }
         }
     };
+    var items2 = [
+        { name: 'key',
+            'type': 'inventory',
+				//what we're really looking for here is that the inventory has added this key
+            'pickup': 'pickupkey'
+        },
+        { name: 'door',
+            'type': 'interactable',
+				unlocked: false,
+            'combineable': {
+                accepts: 'key',
+                sets: {
+                    key: 'unlocked',
+                    value: true
+                },
+                changes: {
+                    'border': '2px solid white'
+                }
+            },
+            toggles: {
+                on: {
+                    changes: {
+                        'background-color': 'lightgray'
+                    },
+                    nextstate: 'off'
+                },
+                off: {
+                    changes: {
+                        'background-color': 'black'
+                    },
+                    nextstate: 'on'
+                },
+                'if': 'unlocked',
+                'else': 'the door is locked',
+                initial: 'off'
+            }
+        }
+    ];
 
     //
     var objectivesDOM = $('#objectives li');
@@ -154,92 +197,155 @@
         };
     })('#inventory');
 
+	var Item = Backbone.Model.extend({
+		defaults: {},
+	});
+
+	var InventoryItem = Item.extend({
+		type: 'inventory'
+	});
+	var InteractableItem = Item.extend({
+		defaults: {
+			combineable: false,
+			toggles: false
+		},
+		type: 'interactable',
+		toggle: function () {
+			if (this.toggles === false) {
+				return false;
+			}
+			if (this.toggles['if'] === undefined || this.toggles['if'] !== undefined && this.toggles['if']) {
+				//do toggle
+				this.state = this.toggles[this.state].nextstate;
+				return this;
+			} else {
+				return false;
+				//display dialogue saying I cant do that
+			}
+		},
+		initialize: function () {
+			if (this.toggles !== false) {
+				this.state = this.toggles.initial;
+			}
+			_.bindAll(this,'toggle');
+		}
+	});
+
+	var Stage = Backbone.Model.extend({
+		defaults: {
+			items: false
+		}
+	});
+	var Inventory = Backbone.Model.extend({
+		defaults: {
+			items: false
+		}
+	});
+
+	var Items = Backbone.Collection.extend({
+		model: Item
+	});
+	var ItemView = Backbone.View.extend({
+		initialize: function () {
+			_.bindAll(this, 'render');
+			this.model.bind('change', this.render);
+		},
+		render: function () {
+			$(this.el)
+			return this;
+		}
+	});
+	var StageView = Backbone.View.extend({
+		id: 'stage',
+		initialize: function () {
+			_.bindAll(this, 'render');
+		},
+		render: function () {
+			_(this.model.items.models).each(function (item) {
+				this.appendItem(item);
+			}, this);
+			return this;
+		},
+		appendItem: function (item) {
+			var itemView = new ItemView ();
+			$(this.el).append(itemView.render().el);
+		}
+	});
+	var items2col = new Items(items2);
+	var stage2 = new Stage({items: items2});
+	var inventory = new Inventory();
+	var stageView = new StageView({model: stage2});
+	var inventoryView = new inventoryView(inventory);
 
     // creates items (optional) and returns a stage object
-    var stage = (function() {
-        var createItem = function(item, id) {
-            if (item.type === 'inventory') {
-                $('#' + id).on('click', function(e) {
-                    inventory.add(this);
-                    if (item.pickup) {
-                        objectivesDOM.trigger(item.pickup);
-                    }
-                });
-            } else if (item.type === 'interactable') {
-                if (item.toggles) {
-                    var initial = item.toggles[item.toggles.initial];
-                    applyChanges.call($('#' + id).data('nextstate', initial.nextstate).get(0), initial.changes);
-                }
-                $('#' + id).on('click', function(e) {
-                    if (item.toggles) {
-                        var newstatename = $(this).data('nextstate'),
-                            newstate = item.toggles[newstatename],
-                            condition = item.toggles['if'];
+	var stage = (function() {
+		var createItem = function(item, id) {
+			if (item.type === 'inventory') {
+				$('#' + id).on('click', function(e) {
+					inventory.add(this);
+					if (item.pickup) {
+					//console.log(item.pickup, id);
+						$('#' + item.pickup).trigger(item.pickup);
+					}
+				});
+			} else if (item.type === 'interactable') {
+				if (item.toggles) {
+					var initial = item.toggles[item.toggles.initial];
+					applyChanges.call($('#' + id).data('nextstate', initial.nextstate).get(0), initial.changes);
+				}
+				$('#' + id).on('click', function(e) {
+					if (item.toggles) {
+						var newstatename = $(this).data('nextstate'),
+						newstate = item.toggles[newstatename],
+						condition = item.toggles['if'];
 
-                        if (condition === null || condition !== null && $(this).data(condition)) {
-                            applyChanges.call(this, newstate.changes);
-                            if (newstate.triggers) {
-                                objectivesDOM.trigger(newstate.triggers);
-                            }
-                            $(this).data('nextstate', newstate.nextstate);
-                        } else {
-                            game.dialogue(item.toggles['else']);
-                        }
-                    }
-                    //set up a one time handler here
-                });
-            } else {
-                alert('type not handled: ' + item.type);
-            }
+						if (condition === null || condition !== null && $(this).data(condition)) {
+							applyChanges.call(this, newstate.changes);
+							if (newstate.triggers) {
+								objectivesDOM.trigger(newstate.triggers);
+							}
+							$(this).data('nextstate', newstate.nextstate);
+						} else {
+							game.dialogue(item.toggles['else']);
+						}
+					}
+				//set up a one time handler here
+				});
+			} else {
+				alert('type not handled: ' + item.type);
+			}
 
-            if (item.combineable) {
-                if (item.combineable.accepts) {
-                    $("#" + id).droppable({
-                        drop: function(event, ui) {
-                            $(this).data(item.combineable.sets.key, item.combineable.sets.value);
-                            applyChanges.call(this, item.combineable.changes);
-                            objectivesDOM.trigger(item.combineable.triggers);
-                            $(ui.draggable).remove();
-                        },
-                        hoverClass: 'drophover'
-                    });
-                }
-                //todo: Else it accepts everything?
-            }
-        };
-        return function(items) {
+			if (item.combineable) {
+				if (item.combineable.accepts) {
+					$("#" + id).droppable({
+						drop: function(event, ui) {
+							$(this).data(item.combineable.sets.key, item.combineable.sets.value);
+							applyChanges.call(this, item.combineable.changes);
+							theobjectives2.trigger(item.combineable.triggers);
+							$(ui.draggable).remove();
+						},
+						hoverClass: 'drophover'
+					});
+				}
+				//todo: Else it accepts everything?
+			}
+		};
+		return function(items) {
 
-            if (items) {
-                for (var id in items) {
-                    var item = items[id];
-                    createItem(item, id);
-                }
-            }
-            return {
-                createItem: createItem
-            };
-        };
-    })();
-
-    //Lets make this return something for operating on the objectives.
-    var objectives = function(objectives) {
-        var conditionMet = function(e) {
-            var obj = e.target;
-            if (!$(obj).data('met')) {
-                $(obj).addClass('met');
-                $(obj).data('met', true);
-            }
-        };
-        for (var evt in objectives) {
-            $('#' + objectives[evt]).on(evt, conditionMet);
-        }
-    };
-    
+			if (items) {
+				for (var id in items) {
+					var item = items[id];
+					createItem(item, id);
+				}
+			}
+			return {
+				createItem: createItem
+			};
+		};
+	})();
     var init = function() {
         var aStage = stage(items);
-        objectives(theObjectives);
     };
-    
     init();
 
 });
