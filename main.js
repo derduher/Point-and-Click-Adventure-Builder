@@ -1,10 +1,11 @@
 ﻿$(function() {
+// Objective Definitions
 	var theObjectives = [
 		{objectiveTitle: 'open door', id: 'opendoor', order: 3},
 		{objectiveTitle: 'pick up key', id: 'pickupkey', order: 1},
 		{objectiveTitle: 'unlock door', id: 'unlockdoor', order: 2}
 	];
-
+// Item Definitions
     var items = [
         { name: 'key',
             'type': 'inventory',
@@ -44,6 +45,7 @@
         }
     ];
 
+// Objective Model
 	var Objective = Backbone.Model.extend({
 		defaults: {
 			// The short text of the objective
