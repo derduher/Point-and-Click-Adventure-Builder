@@ -5,118 +5,7 @@
 		{objectiveTitle: 'unlock door', id: 'unlockdoor', order: 2}
 	];
 
-	var Objective = Backbone.Model.extend({
-		defaults: {
-			// The short text of the objective
-			objectiveTitle: false,
-			// The unique identifier for the objective
-			id: false
-		},
-			//TODO: figure out how to make this private
-		isComplete : false,
-		markComplete: function () {
-			console.log('here');
-			isComplete = true;
-			return this;
-		},
-		complete: function (state) {
-			if (state !== undefined && state !== null) {
-				isComplete = state;
-				return this;
-			}
-			return isComplete;
-		}
-	});
-
-	var Objectives = Backbone.Collection.extend({
-		model: Objective,
-		comparator: function (objective) {
-			return objective.get('order');
-		}
-	});
-
-	var ObjectiveView = Backbone.View.extend({
-		tagName: 'li',
-		initialize: function () {
-			_.bindAll(this,'render');
-			this.model.bind('change',this.render);
-		},
-		render: function () {
-			$(this.el).text(this.model.get('objectiveTitle'));
-			if (this.model.isComplete) {
-				$(this.el).addClass('met');
-			}
-			return this;
-		}
-	});
-
-	var ObjectivesListView = Backbone.View.extend({
-		id: 'objectives',
-		tagName: 'ol',
-		initialize: function () {
-			_.bindAll(this,'render','appendObjective');
-			this.collection = this.options.objectives;
-			this.collection.bind('add',this.appendObjective);
-			this.render();
-		},
-		render: function () {
-			_(this.collection.models).each(function (objective) {
-				this.appendObjective(objective);
-			},this);
-			return this;
-		},
-		appendObjective: function (objective) {
-			var objectiveView = new ObjectiveView({el: '#' + objective.id, model: objective, id: objective.id});
-			$(this.el).append(objectiveView.render().el);
-			return this;
-		}
-	});
-	
-	theobjectives = new Objectives(theObjectives);
-	theobjectivesview = new ObjectivesListView({el:'#objectives', objectives: theobjectives});
-	$('body').append(theobjectivesview);
-	
-
-    var items = {
-        'key': {
-            'type': 'inventory',
-            'pickup': 'pickupkey'
-        },
-        'door': {
-            'type': 'interactable',
-            'combineable': {
-                accepts: 'key',
-                triggers: 'doorunlocked',
-                sets: {
-                    key: 'unlocked',
-                    value: true
-                },
-                changes: {
-                    'border': '2px solid white'
-                }
-            },
-            toggles: {
-                on: {
-                    changes: {
-                        'background-color': 'lightgray'
-                    },
-                    triggers: 'dooropened',
-                    nextstate: 'off'
-                },
-                off: {
-                    changes: {
-                        'background-color': 'black'
-                    },
-                    triggers: 'doorclosed',
-                    nextstate: 'on'
-                },
-                'if': 'unlocked',
-                'else': 'the door is locked',
-                initial: 'off'
-            }
-        }
-    };
-    var items2 = [
+    var items = [
         { name: 'key',
             'type': 'inventory',
 				//what we're really looking for here is that the inventory has added this key
@@ -155,47 +44,35 @@
         }
     ];
 
-    //
-    var objectivesDOM = $('#objectives li');
-    // util function?
-    var applyChanges = function(changes) {
-        for (var prop in changes) {
-            $(this).css(prop, changes[prop]);
-        }
-    };
-    var game = (function(dialogueid) {
-        dialogueSelector = '#' + dialogueid
-        var removeDialogue = function() {
-            $(dialogueSelector).fadeOut(400, function(e) {
-                $(this).remove();
-            });
+	var Objective = Backbone.Model.extend({
+		defaults: {
+			// The short text of the objective
+			objectiveTitle: false,
+			// The unique identifier for the objective
+			id: false
+		},
+			//TODO: figure out how to make this private
+		isComplete : false,
+		markComplete: function () {
+			console.log('here');
+			isComplete = true;
+			return this;
+		},
+		complete: function (state) {
+			if (state !== undefined && state !== null) {
+				isComplete = state;
+				return this;
+			}
+			return isComplete;
+		}
+	});
 
-        };
-        var dialogue = function(message, timeout) {
-            timeout = timeout || 2;
-            $('<div />').text(message).appendTo('body').attr('id', dialogueid);
-            window.setTimeout(removeDialogue, timeout * 1000);
-        };
-        return {
-            dialogue: dialogue
-        };
-    })('dialogue');
-
-    // Something for operating on our objectives
-    var inventory = (function(inventorySelector) {
-        var addToInventory = function(item) {
-            //this is the inventory object
-            $(item).appendTo(inventorySelector);
-            $(item).draggable({
-                containment: 'body',
-                zIndex: 200,
-                revert: 'invalid'
-            });
-        };
-        return {
-            add: addToInventory
-        };
-    })('#inventory');
+	var ObjectiveList = Backbone.Collection.extend({
+		model: Objective,
+		comparator: function (objective) {
+			return objective.get('order');
+		}
+	});
 
 	var Item = Backbone.Model.extend({
 		defaults: {},
@@ -245,6 +122,7 @@
 	var Items = Backbone.Collection.extend({
 		model: Item
 	});
+
 	var ItemView = Backbone.View.extend({
 		initialize: function () {
 			_.bindAll(this, 'render');
@@ -255,6 +133,7 @@
 			return this;
 		}
 	});
+
 	var StageView = Backbone.View.extend({
 		id: 'stage',
 		initialize: function () {
@@ -271,14 +150,100 @@
 			$(this.el).append(itemView.render().el);
 		}
 	});
-	var items2col = new Items(items2);
-	var stage2 = new Stage({items: items2});
+
+	var ObjectiveView = Backbone.View.extend({
+		tagName: 'li',
+		initialize: function () {
+			_.bindAll(this,'render');
+			this.model.bind('change',this.render);
+		},
+		render: function () {
+			$(this.el).text(this.model.get('objectiveTitle'));
+			if (this.model.isComplete) {
+				$(this.el).addClass('met');
+			}
+			return this;
+		}
+	});
+
+	var ObjectivesListView = Backbone.View.extend({
+		id: 'objectives',
+		tagName: 'ol',
+		initialize: function () {
+			_.bindAll(this,'render','appendObjective');
+			this.collection = this.options.objectives;
+			this.collection.bind('add',this.appendObjective);
+			this.render();
+		},
+		render: function () {
+			_(this.collection.models).each(function (objective) {
+				this.appendObjective(objective);
+			},this);
+			return this;
+		},
+		appendObjective: function (objective) {
+			var objectiveView = new ObjectiveView({el: '#' + objective.id, model: objective, id: objective.id});
+			$(this.el).append(objectiveView.render().el);
+			return this;
+		}
+	});
+	
+	var itemscol = new Items(items);
+	var stage = new Stage({items: itemscol});
 	var inventory = new Inventory();
-	var stageView = new StageView({model: stage2});
+	var stageView = new StageView({model: stage});
 	var inventoryView = new inventoryView(inventory);
+	var theobjectives = new ObjectiveList(theObjectives);
+	var theobjectivesview = new ObjectivesListView({el:'#objectives', objectives: theobjectives});
+	$('body').append(theobjectivesview);
+	
+
+
+    //
+    var objectivesDOM = $('#objectives li');
+    // util function?
+    var applyChanges = function(changes) {
+        for (var prop in changes) {
+            $(this).css(prop, changes[prop]);
+        }
+    };
+	 //TODO: create Game Object
+    var game = (function(dialogueid) {
+        dialogueSelector = '#' + dialogueid
+        var removeDialogue = function() {
+            $(dialogueSelector).fadeOut(400, function(e) {
+                $(this).remove();
+            });
+
+        };
+        var dialogue = function(message, timeout) {
+            timeout = timeout || 2;
+            $('<div />').text(message).appendTo('body').attr('id', dialogueid);
+            window.setTimeout(removeDialogue, timeout * 1000);
+        };
+        return {
+            dialogue: dialogue
+        };
+    })('dialogue');
+
+    // Something for operating on our objectives
+    var inventoryback = (function(inventorySelector) {
+        var addToInventory = function(item) {
+            //this is the inventory object
+            $(item).appendTo(inventorySelector);
+            $(item).draggable({
+                containment: 'body',
+                zIndex: 200,
+                revert: 'invalid'
+            });
+        };
+        return {
+            add: addToInventory
+        };
+    })('#inventory');
 
     // creates items (optional) and returns a stage object
-	var stage = (function() {
+	var stageback = (function() {
 		var createItem = function(item, id) {
 			if (item.type === 'inventory') {
 				$('#' + id).on('click', function(e) {
@@ -343,9 +308,5 @@
 			};
 		};
 	})();
-    var init = function() {
-        var aStage = stage(items);
-    };
-    init();
 
 });
