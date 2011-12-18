@@ -1,0 +1,69 @@
+﻿@import url(http://fonts.googleapis.com/css?family=Cabin+Sketch:400,700|Miltonian);
+.interactable {
+}
+.item {
+	display: inline-block;
+	position: absolute;
+}
+.inventoryItem {
+}
+#key {
+	background-color: gold;
+	width: 30px;
+	height: 10px;
+	bottom: 0;
+	left: 110px;
+}
+#door {
+	background-color: green;
+	width: 25px;
+	height: 50px;
+	top: 50px;
+	left: 0;
+	color: white;
+}
+#door.drophover {
+	border: 2px dashed white;
+}
+#door.unlocked {
+	border: 2px solid white;
+}
+#door.open {
+	background-color: lightgray;
+}
+#door.closed {
+	background-color: black;
+}
+#bed {
+	background-color: brown;
+	width: 100px;
+	height: 25px;
+	left: 400px;
+	bottom: 0;
+}
+
+#inventory {
+	background-color: gray;
+	width: 100%;
+	height: 50px;
+	position: relative;
+	overflow: visible;
+}
+#stage {
+	width: 100%;
+	background-color: red;
+	position: relative;
+	height: 100px;
+}
+div {
+	overflow: hidden;
+}
+#objectives {
+	padding: 3px;
+	font-size: 16pt;
+	font-family: 'Miltonian', cursive;
+	li.met {
+		text-decoration: line-through;
+	}
+	list-style: lower-roman inside;
+}
