@@ -8,18 +8,17 @@ var theObjectives = [
 // Item Definitions
 var items = [
 	{ name: 'key',
-		'type': 'inventory',
+		'type': 'inventory'
 			//what we're really looking for here is that the inventory has added this key
-		'pickup': 'pickupkey'
 	},
 	{ name: 'door',
 		'type': 'interactable',
-			unlocked: false,
+		unlocked: false,
 		'combineable': {
 			accepts: 'key',
+//replace with state reflecting what the model has been combined with
 			sets: {
-				key: 'unlocked',
-				value: true
+				'unlocked': true
 			}
 		},
 		toggles: {
@@ -35,6 +34,11 @@ var items = [
 		}
 	}
 ];
+
+
+
+
+
 
 // Objective Model
 var Objective = Backbone.Model.extend({
@@ -68,7 +72,10 @@ var ObjectiveList = Backbone.Collection.extend({
 });
 
 var Item = Backbone.Model.extend({
-	defaults: {},
+	defaults: {}
+});
+var Items = Backbone.Collection.extend({
+	model: Item
 });
 
 var InventoryItem = Item.extend({
@@ -97,7 +104,6 @@ var InteractableItem = Item.extend({
 		if (this.toggles !== false) {
 			this.state = this.toggles.initial;
 		}
-		_.bindAll(this,'toggle');
 	}
 });
 
@@ -107,43 +113,116 @@ var Stage = Backbone.Model.extend({
 		interactables: false
 	}
 });
+
 var Inventory = Backbone.Model.extend({
 	defaults: {
 		items: false
 	}
 });
 
-var Items = Backbone.Collection.extend({
-	model: Item
-});
+
+
+
+
+
+
 
 var InventoryView = Backbone.View.extend({
-	defaults: {
-		items: false
+	id: 'inventory',
+	tagName: 'section',
+	render: function () {
+		$(this.el).append(this.inventoryItems.render().el);
 	}
 });
-// This should have functions which are relavant to both InventoryItems and interactables
+
+var InventoryItemsView = Backbone.View.extend({
+	tag: 'ul',
+	id: 'inventoryItems',
+	initialize: function () {
+		_.bindAll(this,'render');
+		this.collection.bind('add', renderItem);
+	},
+	render: function () {
+		this.collection.each(this.renderItem);
+	},
+	renderItem: function (item) {
+		var view = new InventoryItemView({
+			model: item,
+			inventoryItems: this.collection
+		});
+		$(this.el).append(view.render().el);
+	}
+});
+
+// This should have functions which are relevant to both InventoryItems and interactables
 // is a inventory item rendered any different from a interactable?
 var ItemView = Backbone.View.extend({
 	initialize: function () {
 		_.bindAll(this, 'render');
 		this.model.bind('change', this.render);
+		this.model.bind('remove', this.remove);
 	},
 	render: function () {
 		//TODO: Fill this section out
-		$(this.el)
+		//$(this.el)
 		return this;
 	}
 });
 
+var InventoryItemView = ItemView.extend({
+	tagName: 'li',
+	initialize: function () {
+		//call parent init
+		ItemView.prototype.render.call(this);
+
+		this.model.bind('combine', this.combined);
+		this.model.bind('remove', this.remove);
+	}
+	combined: function () {
+		this.options.inventoryItems.remove(this.model);
+	}
+});
+
 var InteractableItemView = ItemView.extend({
+	events: {
+		'click': 'toggle'
+	},
+	initialize: function () {
+		_.bindAll(this, 'render', 'toggle','drop');
+		this.model.bind('change', this.render);
+		// would need to be modified to handle multiple sets.
+		this.model.bind('change:' + _.keys(this.model.combineable.sets)[0], this.render);
+		if (this.model.has('combineable')) {
+			$(this.el).droppable({
+				drop: this.drop,
+				hoverClass: 'drophover'
+			});
+			if (this.model.combineable.accepts !== undefined) {
+				$(this.el).droppable('option', 'accept', '#' + this.model.combineable.accepts);
+			}
+		}
+	},
 	render: function () {
 		ItemView.prototype.render.call(this);
-		if (this.model.toggles !== undefined) {
+		if (this.model.has('toggles')) {
 			$(this.el).addClass(this.model.state);
 		}
 		return this;
+	},
+	toggle: function () {
+		//when this fails should we call dialogue directly here?
+		//does dialogue have a model?
+		this.model.toggle();
+	},
+	drop: function (event, ui) {
+		if (this.model.combineable.sets !== undefined) {
+			this.model.set(this.model.combineable.sets);
+		}
+		$(ui.draggable).trigger('combined');
 	}
+});
+
+var PickupItemView = ItemView.extend({
 });
 
 var StageView = Backbone.View.extend({
@@ -200,18 +279,54 @@ var ObjectivesListView = Backbone.View.extend({
 	}
 });
 
-var itemscol = new Items(items);
-var stage = new Stage({items: itemscol});
+
+
+
+
+
+var stage = new Stage({items: new Items(items)});
 var inventory = new Inventory();
-var stageView = new StageView({model: stage});
-var inventoryView = new InventoryView(inventory);
 var theobjectives = new ObjectiveList(theObjectives);
-var theobjectivesview = new ObjectivesListView({el:'#objectives', objectives: theobjectives});
-$('body').append(theobjectivesview);
 
 
 
-//
+
+window.BackboneTunes = Backbone.Router.extend({
+	routes: {
+		'': 'home',
+		'blank': 'blank'
+	},
+
+	initialize: function() {
+		this.objectivesView = new ObjectivesListView({
+			el: '#objectives',
+			objectives: theobjectives
+		});
+
+		this.inventoryView = new inventoryView({
+			model: inventory
+		});
+
+		this.stageView = new StageView({
+			model: stage
+		});
+	},
+
+	home: function() {
+		$('body').empty()
+			.append(this.inventoryView.render().el)
+			.append(this.stageView.render().el)
+			.append(this.objectivesView.render().el);
+	},
+
+	blank: function() {
+		$('#container').empty();
+		$('#container').text('blank');
+	}
+});
+
+
+
 var objectivesDOM = $('#objectives li');
 // util function?
 var applyChanges = function(changes) {
@@ -221,7 +336,7 @@ var applyChanges = function(changes) {
 };
  //TODO: create Game Object
 var game = (function(dialogueid) {
-	dialogueSelector = '#' + dialogueid
+	dialogueSelector = '#' + dialogueid;
 	var removeDialogue = function() {
 		$(dialogueSelector).fadeOut(400, function(e) {
 			$(this).remove();
@@ -304,7 +419,7 @@ var stageback = (function() {
 					hoverClass: 'drophover'
 				});
 			}
-			//todo: Else it accepts everything?
+			//TODO: Else it accepts everything?
 		}
 	};
 	return function(items) {
