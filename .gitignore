@@ -1,6 +1,4 @@
 
-.Spike.html.swp
+*.swp
 
-.main.js.swp
-
-.spike.css.swp
+.sass-cache/
