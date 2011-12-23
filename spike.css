@@ -24,10 +24,10 @@
 #door.unlocked {
   border: 2px solid white; }
 
-#door.open {
+#door.on {
   background-color: lightgray; }
 
-#door.closed {
+#door.off {
   background-color: black; }
 
 #bed {
