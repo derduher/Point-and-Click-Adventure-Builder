@@ -3,6 +3,15 @@
   display: inline-block;
   position: absolute; }
 
+#inventoryItems {
+  padding-left: 0; }
+  #inventoryItems .item {
+    position: initial;
+    left: initial;
+    top: initial;
+    bottom: initial;
+    right: initial; }
+
 #key {
   background-color: gold;
   width: 30px;
@@ -16,7 +25,8 @@
   height: 50px;
   top: 50px;
   left: 0;
-  color: white; }
+  color: white;
+  border: 2px solid transparent; }
 
 #door.drophover {
   border: 2px dashed white; }

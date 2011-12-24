@@ -5,7 +5,15 @@
 	display: inline-block;
 	position: absolute;
 }
-.inventoryItem {
+#inventoryItems {
+	padding-left: 0;
+	.item {
+		position: initial;
+		left: initial;
+		top: initial;
+		bottom: initial;
+		right: initial;
+	}
 }
 #key {
 	background-color: gold;
@@ -21,6 +29,7 @@
 	top: 50px;
 	left: 0;
 	color: white;
+	border: 2px solid transparent;
 }
 #door.drophover {
 	border: 2px dashed white;
@@ -28,10 +37,10 @@
 #door.unlocked {
 	border: 2px solid white;
 }
-#door.open {
+#door.on {
 	background-color: lightgray;
 }
-#door.closed {
+#door.off {
 	background-color: black;
 }
 #bed {

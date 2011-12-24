@@ -301,6 +301,7 @@ var ObjectiveView = Backbone.View.extend({
 		var key = _.keys(al)[0];
 		if (al[key] === changed[key]) {
 			this.model.set({isComplete: true});
+			what.unbind('change:' + key, this.stateChange);
 		}
 	}
 });
@@ -422,14 +423,8 @@ var PointAndClickGame = Backbone.Router.extend({
         window.App = new PointAndClickGame();
         Backbone.history.start();
 
-/*var objectivesDOM = $('#objectives li');
+/*
 // util function?
-var applyChanges = function(changes) {
-	for (var prop in changes) {
-		$(this).css(prop, changes[prop]);
-	}
-};
- //TODO: create Game Object
 var game = (function(dialogueid) {
 	dialogueSelector = '#' + dialogueid;
 	var removeDialogue = function() {
@@ -447,21 +442,5 @@ var game = (function(dialogueid) {
 		dialogue: dialogue
 	};
 })('dialogue');
-
-// Something for operating on our objectives
-var inventoryback = (function(inventorySelector) {
-	var addToInventory = function(item) {
-		//this is the inventory object
-		$(item).appendTo(inventorySelector);
-		$(item).draggable({
-			containment: 'body',
-			zIndex: 200,
-			revert: 'invalid'
-		});
-	};
-	return {
-		add: addToInventory
-	};
-})('#inventory');
 */
 });
