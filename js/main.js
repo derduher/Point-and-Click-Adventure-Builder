@@ -408,7 +408,7 @@ var PointAndClickGame = Backbone.Router.extend({
 	},
 
 	home: function() {
-		$('body').append(this.inventoryView.render().el)
+		$('main').append(this.inventoryView.render().el)
 			.append(this.stageView.render().el)
 			.append(this.objectivesView.render().el);
 	},
