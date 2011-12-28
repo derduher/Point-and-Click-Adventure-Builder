@@ -33,10 +33,9 @@ var items = {
 	}]
 };
 
-
-
-
-
+/**
+ * Objective Definitions
+ */
 
 // Objective Model
 var Objective = Backbone.Model.extend({
@@ -82,17 +81,18 @@ var InteractableItem = Item.extend({
 	},
 	type: 'interactable',
 	toggle: function () {
-		if (this.get('toggles') === false) {
+		var toggle, cond;
+		if ((toggle = this.get('toggles')) === false) {
 			return false;
 		}
-		if (this.get('toggles')['if'] === undefined || this.get('toggles')['if'] !== undefined && this.get(this.get('toggles')['if']) === true) {
+		if (toggle['if'] === undefined || toggle['if'] !== undefined && this.get(toggle['if']) === true) {
 			//do toggle
 			this.set({previousState: this.get('state')});
-			this.set({state : this.get('toggles')[this.get('state')].nextstate});
+			this.set({state : toggle[this.get('state')].nextstate});
 			return this;
 		} else {
+			this.trigger('failedToggleCondition', toggle['else']);
 			return false;
-			//display dialogue saying I cant do that
 		}
 	},
 	initialize: function () {
@@ -129,13 +129,12 @@ var Inventory = Backbone.Model.extend({
 	}
 });
 
+var Dialogue = Backbone.Model.extend({});
 
-
-
-
-
-
-
+/**
+ * View Definitions
+ *
+ */
 
 // This should have functions which are relevant to both InventoryItems and interactables
 // is a inventory item rendered any different from a interactable?
@@ -176,10 +175,11 @@ var InteractableItemView = ItemView.extend({
 	},
 	initialize: function () {
 		ItemView.prototype.initialize.call(this);
-		_.bindAll(this, 'render', 'toggle', 'drop', 'renderState', 'renderSetable', 'renderSetableChange');
+		_.bindAll(this, 'render', 'toggle', 'drop', 'renderState', 'renderSetable', 'renderSetableChange', 'showFailedToggle');
 		//this.model.bind('change', this.render);
 		// would need to be modified to handle multiple sets.
 		this.model.bind('change:state', this.renderState);
+		this.model.bind('failedToggleCondition', this.showFailedToggle);
 		if (this.model.has('combineable')) {
 			this.model.bind('change:' + _.keys(this.model.get('combineable').sets)[0], this.renderSetableChange);
 			$(this.el).droppable({
@@ -231,6 +231,11 @@ var InteractableItemView = ItemView.extend({
 			$(this.el).removeClass(this.model.get('previousState'));
 		}
 		$(this.el).addClass(this.model.get('state'));
+		return this;
+	},
+	showFailedToggle: function (msg) {
+		var dialogue = new DialogueView({model: new Dialogue({message: msg})});
+		$('#main').append(dialogue.render().el);
 		return this;
 	}
 });
@@ -366,11 +371,28 @@ var InventoryItemsView = Backbone.View.extend({
 	}
 });
 
+var DialogueView = Backbone.View.extend ({
+	id: 'dialogue',
+	initialize: function () {
+		_.bindAll(this, 'render', 'remove');
+		this.model.bind('remove', this.remove);
+	},
+	render: function () {
+		$(this.el).text(this.model.get('message'));
+		var tmp = function (model) {model.trigger('remove');};
+		_.delay(tmp, 2000, this.model);
+		return this;
+	},
+	remove: function () {
+		$(this.el).fadeOut(400, function (e) {
+			$(this).remove();
+		});
+	}
+});
 
-
-
-
-
+/**
+ * Model kickstart.
+ */
 window.stage = new Stage({
 	items: new PickupItems(items.items),
 	interactables: new InteractableItems(items.interactables)
@@ -378,9 +400,9 @@ window.stage = new Stage({
 var inventory = new Inventory();
 var theobjectives = new ObjectiveList(theObjectives);
 
-
-
-
+/**
+ * Router Definition
+ */
 var PointAndClickGame = Backbone.Router.extend({
 	routes: {
 		'': 'home',
@@ -405,10 +427,11 @@ var PointAndClickGame = Backbone.Router.extend({
 			model: stage,
 			el: '#stage'
 		});
+		
 	},
 
 	home: function() {
-		$('main').append(this.inventoryView.render().el)
+		$('#main').append(this.inventoryView.render().el)
 			.append(this.stageView.render().el)
 			.append(this.objectivesView.render().el);
 	},
@@ -420,27 +443,7 @@ var PointAndClickGame = Backbone.Router.extend({
 });
 
 
-        window.App = new PointAndClickGame();
-        Backbone.history.start();
+	window.App = new PointAndClickGame();
+	Backbone.history.start();
 
-/*
-// util function?
-var game = (function(dialogueid) {
-	dialogueSelector = '#' + dialogueid;
-	var removeDialogue = function() {
-		$(dialogueSelector).fadeOut(400, function(e) {
-			$(this).remove();
-		});
-
-	};
-	var dialogue = function(message, timeout) {
-		timeout = timeout || 2;
-		$('<div />').text(message).appendTo('body').attr('id', dialogueid);
-		window.setTimeout(removeDialogue, timeout * 1000);
-	};
-	return {
-		dialogue: dialogue
-	};
-})('dialogue');
-*/
 });
