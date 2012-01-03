@@ -12,7 +12,7 @@ var items = {
 		id: 'door',
 		unlocked: false,
 		active: true,
-		combineable: {
+		combinable: {
 			accepts: 'key',
 //replace with state reflecting what the model has been combined with
 			sets: {
@@ -96,7 +96,7 @@ var Item = Backbone.Model.extend({
 			}
 		}
 	}),
-	Combineable = InteractableItem.extend({});
+	Combinable = InteractableItem.extend({});
 var Items = Backbone.Collection.extend({
 	model: Item
 });
@@ -235,7 +235,7 @@ var InteractableItemView = ItemView.extend({
 		return this;
 	}
 });
-var CombineableItemView = InteractableItemView.extend({
+var CombinableItemView = InteractableItemView.extend({
 	initialize: function () {
 		InteractableItemView.prototype.initialize.call(this);
 		_(this).bindAll('drop');
@@ -285,8 +285,8 @@ var StageView = Backbone.View.extend({
 		}, this);
 		_(this.model.get('interactables').models).each(function (item) {
 			var View = InteractableItemView;
-			if (item instanceof Combineable) {
-				View = CombineableItemView;
+			if (item instanceof Combinable) {
+				View = CombinableItemView;
 			}
 			this.appendItem(item, View);
 		}, this);
@@ -418,10 +418,10 @@ var DialogueView = Backbone.View.extend ({
  */
 var interactables = _(items.interactables).map(function (item) {
 	var Obj = InteractableItem;
-	if (item.combineable !== undefined) {
-		Obj = Combineable;
-		item = _(item).extend(item.combineable);
-		item.combineable = undefined;
+	if (item.combinable !== undefined) {
+		Obj = Combinable;
+		item = _(item).extend(item.combinable);
+		item.combinable = undefined;
 	}
 	return new Obj(item);
 });
