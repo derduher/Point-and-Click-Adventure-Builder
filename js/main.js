@@ -76,26 +76,27 @@ var Item = Backbone.Model.extend({
 	PickupItem = Item.extend({
 }),
 	InteractableItem = Item.extend({
-	toggle: function () {
-		var cond, toggle = this.get('toggles');
-		if (!this.has('toggles')) {
-			return false;
+		toggle: function () {
+			var cond, toggle = this.get('toggles');
+			if (!this.has('toggles')) {
+				return false;
+			}
+			if (toggle['if'] !== undefined && this.get(toggle['if']) !== true) {
+				this.trigger('failedToggleCondition', toggle['else']);
+				return false;
+			} else {
+				this.set({previousState: this.get('state')});
+				this.set({state : toggle[this.get('state')].nextstate});
+				return this;
+			}
+		},
+		initialize: function () {
+			if (this.has('toggles')) {
+				this.set({state : this.get('toggles').initial});
+			}
 		}
-		if (toggle['if'] !== undefined && this.get(toggle['if']) !== true) {
-			this.trigger('failedToggleCondition', toggle['else']);
-			return false;
-		} else {
-			this.set({previousState: this.get('state')});
-			this.set({state : toggle[this.get('state')].nextstate});
-			return this;
-		}
-	},
-	initialize: function () {
-		if (this.has('toggles')) {
-			this.set({state : this.get('toggles').initial});
-		}
-	}
-});
+	}),
+	Combineable = InteractableItem.extend({});
 var Items = Backbone.Collection.extend({
 	model: Item
 });
@@ -147,7 +148,6 @@ var ItemView = Backbone.View.extend({
 		_(changed).map(this.renderSetable, this);
 	},
 	renderSetable: function (stateVal, stateName) {
-		console.log(stateVal,stateName);
 		if (this.model.get(stateName) === stateVal) {
 			$(this.el).addClass(stateName);
 		} else {
@@ -184,9 +184,8 @@ var InventoryItemView = ItemView.extend({
 
 var InteractableItemView = ItemView.extend({
 	initialize: function () {
-		var combineable;
 		ItemView.prototype.initialize.call(this);
-		_(this).bindAll('toggle', 'drop','produce', 'open', 'renderState', 'showFailedToggle');
+		_(this).bindAll('toggle','produce', 'open', 'renderState', 'showFailedToggle');
 		this.model.bind('change:state', this.renderState);
 		this.model.bind('change:open', this.renderSetableChange);
 		this.model.bind('failedToggleCondition', this.showFailedToggle);
@@ -205,25 +204,11 @@ var InteractableItemView = ItemView.extend({
 				},this);
 			}, this);
 		}
-		if (this.model.has('combineable')) {
-			combineable = this.model.get('combineable');
-			this.model.bind('change:' + _(combineable.sets).keys()[0], this.renderSetableChange);
-			$(this.el).droppable({
-				drop: this.drop,
-				hoverClass: 'drophover'
-			});
-			if (combineable.accepts !== undefined) {
-				$(this.el).droppable('option', 'accept', '#' + combineable.accepts);
-			}
-		}
 	},
 	render: function () {
 		ItemView.prototype.render.call(this);
 		if (this.model.has('state')) {
 			this.renderState();
-		}
-		if (this.model.has('combineable') && this.model.get('combineable').sets !== undefined) {
-			_(this.model.get('combineable').sets).map(this.renderSetable, this);
 		}
 		return this;
 	},
@@ -237,13 +222,6 @@ var InteractableItemView = ItemView.extend({
 		this.model.toggle();
 		return this;
 	},
-	drop: function (event, ui) {
-		if (this.model.get('combineable').sets !== undefined) {
-			this.model.set(this.model.get('combineable').sets);
-		}
-		$(ui.draggable).trigger('combined');
-		return this;
-	},
 	renderState: function () {
 		if (this.model.has('previousState')) {
 			$(this.el).removeClass(this.model.get('previousState'));
@@ -254,6 +232,34 @@ var InteractableItemView = ItemView.extend({
 	showFailedToggle: function (msg) {
 		var dialogue = new DialogueView({model: new Dialogue({message: msg})});
 		$('#main').append(dialogue.render().el);
+		return this;
+	}
+});
+var CombineableItemView = InteractableItemView.extend({
+	initialize: function () {
+		InteractableItemView.prototype.initialize.call(this);
+		_(this).bindAll('drop');
+		this.model.bind('change:' + _(this.model.get('sets')).keys()[0], this.renderSetableChange);
+		$(this.el).droppable({
+			drop: this.drop,
+			hoverClass: 'drophover'
+		});
+		if (this.model.has('accepts')) {
+			$(this.el).droppable('option', 'accept', '#' + this.model.get('accepts'));
+		}
+	},
+	render: function () {
+		InteractableItemView.prototype.render.call(this);
+		if (this.model.has('sets')) {
+			_(this.model.get('sets')).map(this.renderSetable, this);
+		}
+		return this;
+	},
+	drop: function (event, ui) {
+		if (this.model.has('sets')) {
+			this.model.set(this.model.get('sets'));
+		}
+		$(ui.draggable).trigger('combined');
 		return this;
 	}
 });
@@ -275,21 +281,19 @@ var StageView = Backbone.View.extend({
 	},
 	render: function () {
 		_(this.model.get('items').models).each(function (item) {
-			this.appendItem(item, 'pickup');
+			this.appendItem(item, PickupItemView);
 		}, this);
 		_(this.model.get('interactables').models).each(function (item) {
-			this.appendItem(item, 'interactable');
+			var View = InteractableItemView;
+			if (item instanceof Combineable) {
+				View = CombineableItemView;
+			}
+			this.appendItem(item, View);
 		}, this);
 		return this;
 	},
-	appendItem: function (item, type) {
-		var view, options = {el: '#' + item.id, model: item, collection: this.model.get('items')};
-		if (type === 'pickup') {
-			view = new PickupItemView (options);
-		} else {
-			view = new InteractableItemView (options);
-		}
-
+	appendItem: function (item, View) {
+		var view = new View({el: '#' + item.id, model: item, collection: this.model.get('items')});
 		$(this.el).append(view.render().el);
 	}
 });
@@ -412,9 +416,18 @@ var DialogueView = Backbone.View.extend ({
 /**
  * Model kickstart.
  */
+var interactables = _(items.interactables).map(function (item) {
+	var Obj = InteractableItem;
+	if (item.combineable !== undefined) {
+		Obj = Combineable;
+		item = _(item).extend(item.combineable);
+		item.combineable = undefined;
+	}
+	return new Obj(item);
+});
 window.stage = new Stage({
 	items: new PickupItems(items.items),
-	interactables: new InteractableItems(items.interactables)
+	interactables: new InteractableItems(interactables)
 });
 var inventory = new Inventory();
 var theobjectives = new ObjectiveList(theObjectives);
