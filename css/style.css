@@ -210,8 +210,11 @@ td {
    Author: 
    ========================================================================== */
 .item {
-  display: inline-block;
+  display: none;
   position: absolute; }
+
+.item.active {
+  display: inline-block; }
 
 #inventoryItems {
   padding-left: 0; }
@@ -223,7 +226,7 @@ td {
     right: initial; }
 
 #key {
-  background-color: gold;
+  background-color: #FFD700;
   width: 30px;
   height: 10px;
   bottom: 0;
@@ -239,26 +242,29 @@ td {
   border: 2px solid transparent; }
 
 #door.drophover {
-  border: 2px dashed white; }
+  border: 2px dashed #FFF; }
 
 #door.unlocked {
-  border: 2px solid white; }
+  border: 2px solid #FFF; }
 
 #door.on {
-  background-color: lightgray; }
+  background-color: #D3D3D3; }
 
 #door.off {
-  background-color: black; }
+  background-color: #000; }
 
 #bed {
-  background-color: brown;
+  background-color: #A52A2A;
   width: 100px;
   height: 25px;
   left: 400px;
   bottom: 0; }
 
+#bed.open {
+  background-color: #789; }
+
 #inventory {
-  background-color: gray;
+  background-color: #808080;
   width: 100%;
   height: 50px;
   position: relative;
@@ -267,7 +273,7 @@ td {
 
 #stage {
   width: 100%;
-  background-color: red;
+  background-color: #F00;
   position: relative;
   height: 100px; }
 

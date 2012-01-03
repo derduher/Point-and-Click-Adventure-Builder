@@ -7,12 +7,12 @@ var theObjectives = [
 ];
 // Item Definitions
 var items = {
-	items: [{ id: 'key', 'type': 'inventory'}],
+	items: [{ id: 'key', active: false}],
 	interactables: [{
 		id: 'door',
-		'type': 'interactable',
 		unlocked: false,
-		'combineable': {
+		active: true,
+		combineable: {
 			accepts: 'key',
 //replace with state reflecting what the model has been combined with
 			sets: {
@@ -30,6 +30,16 @@ var items = {
 			'else': 'the door is locked',
 			initial: 'off'
 		}
+	},
+	{
+		id: 'bed',
+		open: false,
+		active: true,
+		events: {click: ['open']},
+		produces: {
+			object:'key',
+			on: 'open'
+		}
 	}]
 };
 
@@ -39,13 +49,7 @@ var items = {
 
 // Objective Model
 var Objective = Backbone.Model.extend({
-	defaults: {
-		// The short text of the objective
-		objectiveTitle: false,
-		// The unique identifier for the objective
-		id: false
-	},
-		//TODO: figure out how to make this private
+	//TODO: figure out how to make this private
 	isComplete : false,
 	markComplete: function () {
 		this.set({'isComplete': true});
@@ -68,35 +72,26 @@ var ObjectiveList = Backbone.Collection.extend({
 });
 
 var Item = Backbone.Model.extend({
-	defaults: {}
-});
-
-var PickupItem = Item.extend({
-	defaults: {type: 'pickup'}
-});
-var InteractableItem = Item.extend({
-	defaults: {
-		combineable: false,
-		toggles: false
-	},
-	type: 'interactable',
+}),
+	PickupItem = Item.extend({
+}),
+	InteractableItem = Item.extend({
 	toggle: function () {
-		var toggle, cond;
-		if ((toggle = this.get('toggles')) === false) {
+		var cond, toggle = this.get('toggles');
+		if (!this.has('toggles')) {
 			return false;
 		}
-		if (toggle['if'] === undefined || toggle['if'] !== undefined && this.get(toggle['if']) === true) {
-			//do toggle
+		if (toggle['if'] !== undefined && this.get(toggle['if']) !== true) {
+			this.trigger('failedToggleCondition', toggle['else']);
+			return false;
+		} else {
 			this.set({previousState: this.get('state')});
 			this.set({state : toggle[this.get('state')].nextstate});
 			return this;
-		} else {
-			this.trigger('failedToggleCondition', toggle['else']);
-			return false;
 		}
 	},
 	initialize: function () {
-		if (this.get('toggles') !== false) {
+		if (this.has('toggles')) {
 			this.set({state : this.get('toggles').initial});
 		}
 	}
@@ -141,10 +136,28 @@ var Dialogue = Backbone.Model.extend({});
 var ItemView = Backbone.View.extend({
 	className: 'item',
 	initialize: function () {
-		_.bindAll(this, 'render', 'remove');
+		_(this).bindAll('render', 'remove', 'renderSetableChange', 'renderSetable');
 		//this.model.bind('change', this.render);
 		this.model.bind('remove', this.remove);
+		this.model.bind('change:active', this.renderSetableChange);
 		this.el.id = this.model.get('id');
+	},
+	renderSetableChange: function (model, value){
+		var changed = model.changedAttributes();
+		_(changed).map(this.renderSetable, this);
+	},
+	renderSetable: function (stateVal, stateName) {
+		console.log(stateVal,stateName);
+		if (this.model.get(stateName) === stateVal) {
+			$(this.el).addClass(stateName);
+		} else {
+			$(this.el).removeClass(stateName);
+		}
+		return this;
+	},
+	render: function () {
+		this.renderSetable(true, 'active');
+		return this;
 	}
 });
 
@@ -170,24 +183,37 @@ var InventoryItemView = ItemView.extend({
 });
 
 var InteractableItemView = ItemView.extend({
-	events: {
-		'click': 'toggle'
-	},
 	initialize: function () {
+		var combineable;
 		ItemView.prototype.initialize.call(this);
-		_.bindAll(this, 'render', 'toggle', 'drop', 'renderState', 'renderSetable', 'renderSetableChange', 'showFailedToggle');
-		//this.model.bind('change', this.render);
-		// would need to be modified to handle multiple sets.
+		_(this).bindAll('toggle', 'drop','produce', 'open', 'renderState', 'showFailedToggle');
 		this.model.bind('change:state', this.renderState);
+		this.model.bind('change:open', this.renderSetableChange);
 		this.model.bind('failedToggleCondition', this.showFailedToggle);
+		if (this.model.has('produces')) {
+			this.model.bind('change:' + this.model.get('produces').on, this.produce);
+		}
+		if (this.model.has('toggles')) {
+			this.delegateEvents({'click': 'toggle'});
+		}
+		if (this.model.has('events')) {
+			_(this.model.get('events')).each(function (val, key) {
+				var obj = {};
+				_(val).each(function (arVal) {
+					obj[key] = arVal;
+					this.delegateEvents(obj);
+				},this);
+			}, this);
+		}
 		if (this.model.has('combineable')) {
-			this.model.bind('change:' + _.keys(this.model.get('combineable').sets)[0], this.renderSetableChange);
+			combineable = this.model.get('combineable');
+			this.model.bind('change:' + _(combineable.sets).keys()[0], this.renderSetableChange);
 			$(this.el).droppable({
 				drop: this.drop,
 				hoverClass: 'drophover'
 			});
-			if (this.model.get('combineable').accepts !== undefined) {
-				$(this.el).droppable('option', 'accept', '#' + this.model.get('combineable').accepts);
+			if (combineable.accepts !== undefined) {
+				$(this.el).droppable('option', 'accept', '#' + combineable.accepts);
 			}
 		}
 	},
@@ -197,13 +223,17 @@ var InteractableItemView = ItemView.extend({
 			this.renderState();
 		}
 		if (this.model.has('combineable') && this.model.get('combineable').sets !== undefined) {
-			_.map(this.model.get('combineable').sets, this.renderSetable, this);
+			_(this.model.get('combineable').sets).map(this.renderSetable, this);
 		}
 		return this;
 	},
+	produce: function () {
+		this.collection.get(this.model.get('produces').object).set({active: true});
+	},
+	open: function () {
+		this.model.set({'open': true});
+	},
 	toggle: function () {
-		//when this fails should we call dialogue directly here?
-		//does dialogue have a model?
 		this.model.toggle();
 		return this;
 	},
@@ -212,18 +242,6 @@ var InteractableItemView = ItemView.extend({
 			this.model.set(this.model.get('combineable').sets);
 		}
 		$(ui.draggable).trigger('combined');
-		return this;
-	},
-	renderSetableChange: function (model, value){
-		var changed = model.changedAttributes();
-		_.map(changed, this.renderSetable, this);
-	},
-	renderSetable: function (stateVal, stateName) {
-		if (this.model.get(stateName) === stateVal) {
-			$(this.el).addClass(stateName);
-		} else {
-			$(this.el).removeClass(stateName);
-		}
 		return this;
 	},
 	renderState: function () {
@@ -241,12 +259,10 @@ var InteractableItemView = ItemView.extend({
 });
 
 var PickupItemView = ItemView.extend({
-	//bind to click here
 	events: {
 		'click': 'pickup'
 	},
 	pickup: function () {
-		// notify the model?
 		this.collection.trigger('pickup', this.model);
 		this.model.trigger('pickup', this.model);
 	}
@@ -255,23 +271,23 @@ var PickupItemView = ItemView.extend({
 var StageView = Backbone.View.extend({
 	id: 'stage',
 	initialize: function () {
-		_.bindAll(this, 'render','appendItem');
+		_(this).bindAll('render','appendItem');
 	},
 	render: function () {
-		_.each(this.model.get('items').models, function (item) {
+		_(this.model.get('items').models).each(function (item) {
 			this.appendItem(item, 'pickup');
 		}, this);
-		_.each(this.model.get('interactables').models, function (item) {
+		_(this.model.get('interactables').models).each(function (item) {
 			this.appendItem(item, 'interactable');
 		}, this);
 		return this;
 	},
 	appendItem: function (item, type) {
-		var view;
+		var view, options = {el: '#' + item.id, model: item, collection: this.model.get('items')};
 		if (type === 'pickup') {
-			view = new PickupItemView ({el: '#' + item.id, model: item, collection: this.model.get('items')});
+			view = new PickupItemView (options);
 		} else {
-			view = new InteractableItemView ({el: '#' + item.id, model: item});
+			view = new InteractableItemView (options);
 		}
 
 		$(this.el).append(view.render().el);
@@ -281,13 +297,13 @@ var StageView = Backbone.View.extend({
 var ObjectiveView = Backbone.View.extend({
 	tagName: 'li',
 	initialize: function () {
-		_.bindAll(this, 'render', 'pickup', 'stateChange');
+		_(this).bindAll('render', 'pickup', 'stateChange');
 		this.model.bind('change', this.render);
 		if (this.model.has('pickup')) {
 			this.options.stageItems.get(this.model.get('object')).bind('pickup', this.pickup);
 		}
 		if (this.model.has('var')) {
-			this.options.interactables.get(this.model.get('object')).bind('change:' + _.keys(this.model.get('var'))[0], this.stateChange);
+			this.options.interactables.get(this.model.get('object')).bind('change:' + _(this.model.get('var')).keys()[0], this.stateChange);
 		}
 	},
 	render: function () {
@@ -301,9 +317,9 @@ var ObjectiveView = Backbone.View.extend({
 		this.model.set({'isComplete': true});
 	},
 	stateChange: function (what) {
-		var changed = what.changedAttributes();
-		var al = this.model.get('var');
-		var key = _.keys(al)[0];
+		var changed = what.changedAttributes(),
+			al = this.model.get('var'),
+			key = _(al).keys()[0];
 		if (al[key] === changed[key]) {
 			this.model.set({isComplete: true});
 			what.unbind('change:' + key, this.stateChange);
@@ -315,18 +331,22 @@ var ObjectivesListView = Backbone.View.extend({
 	id: 'objectives',
 	tagName: 'ol',
 	initialize: function () {
-		_.bindAll(this, 'render', 'appendObjective');
+		_(this).bindAll('render', 'appendObjective');
 		this.collection = this.options.objectives;
 		this.collection.bind('add', this.appendObjective);
 	},
 	render: function () {
-		_.each(this.collection.models, function (objective) {
+		_(this.collection.models).each(function (objective) {
 			this.appendObjective(objective);
 		},this);
 		return this;
 	},
 	appendObjective: function (objective) {
-		var objectiveView = new ObjectiveView({el: '#' + objective.id, model: objective, stageItems: this.options.stageItems, interactables: this.options.interactables});
+		var objectiveView = new ObjectiveView({
+			el: '#' + objective.id,
+			model: objective,
+			stageItems: this.options.stageItems,
+			interactables: this.options.interactables});
 		$(this.el).append(objectiveView.render().el);
 		return this;
 	}
@@ -346,7 +366,7 @@ var InventoryItemsView = Backbone.View.extend({
 	tagName: 'ul',
 	id: 'inventoryItems',
 	initialize: function () {
-		_.bindAll(this, 'render', 'renderItem', 'pickup');
+		_(this).bindAll('render', 'renderItem', 'pickup');
 		this.collection.bind('add', this.renderItem);
 		this.stageItems = this.options.stage.get('items');
 		this.stageItems.bind('pickup', this.pickup);
@@ -364,7 +384,6 @@ var InventoryItemsView = Backbone.View.extend({
 		return this;
 	},
 	pickup: function (item) {
-		//Turn item into an inventoryItem
 		this.stageItems.remove(item);
 		this.collection.add(item);
 		return this;
@@ -374,13 +393,13 @@ var InventoryItemsView = Backbone.View.extend({
 var DialogueView = Backbone.View.extend ({
 	id: 'dialogue',
 	initialize: function () {
-		_.bindAll(this, 'render', 'remove');
+		_(this).bindAll('render', 'remove');
 		this.model.bind('remove', this.remove);
 	},
 	render: function () {
 		$(this.el).text(this.model.get('message'));
 		var tmp = function (model) {model.trigger('remove');};
-		_.delay(tmp, 2000, this.model);
+		_(tmp).delay(2000, this.model);
 		return this;
 	},
 	remove: function () {
