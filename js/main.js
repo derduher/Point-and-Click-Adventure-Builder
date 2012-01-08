@@ -20,15 +20,10 @@ var items = {
 			}
 		},
 		toggles: {
-			on: {
-				nextstate: 'off'
-			},
-			off: {
-				nextstate: 'on'
-			},
+			states: ['on', 'off'],
 			'if': 'unlocked',
 			'else': 'the door is locked',
-			initial: 'off'
+			initial: 1
 		}
 	},
 	{
@@ -81,18 +76,24 @@ var Item = Backbone.Model.extend({
 			if (!this.has('toggles')) {
 				return false;
 			}
-			if (toggle['if'] !== undefined && this.get(toggle['if']) !== true) {
+			if (this.has('condition') && this.get(this.get('condition')) !== true) {
 				this.trigger('failedToggleCondition', toggle['else']);
 				return false;
 			} else {
-				this.set({previousState: this.get('state')});
-				this.set({state : toggle[this.get('state')].nextstate});
+				this.statePos = (this.statePos + 1) % this.states.length;
+				this.set({state: this.states[this.statePos]});
 				return this;
 			}
 		},
 		initialize: function () {
 			if (this.has('toggles')) {
-				this.set({state : this.get('toggles').initial});
+				var toggles = this.get('toggles');
+				this.states = toggles.states;
+				this.statePos = toggles.initial;
+				this.set({state: this.states[this.statePos]});
+				if (toggles['if']) {
+					this.set({condition: toggles['if']});
+				}
 			}
 		}
 	}),
@@ -223,9 +224,7 @@ var InteractableItemView = ItemView.extend({
 		return this;
 	},
 	renderState: function () {
-		if (this.model.has('previousState')) {
-			$(this.el).removeClass(this.model.get('previousState'));
-		}
+		$(this.el).removeClass(this.model.previous('state'));
 		$(this.el).addClass(this.model.get('state'));
 		return this;
 	},

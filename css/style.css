@@ -288,6 +288,9 @@ div {
   #objectives li.met {
     text-decoration: line-through; }
 
+#dialogue {
+  font-size: 18pt; }
+
 /* ==|== non-semantic helper classes ======================================== */
 .ir {
   display: block;
