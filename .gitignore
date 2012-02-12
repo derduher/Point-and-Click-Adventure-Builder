@@ -2,3 +2,7 @@
 *.swp
 
 .sass-cache/
+
+.DS_Store
+
+./js/.DS_Store

@@ -139,8 +139,8 @@ var ItemView = Backbone.View.extend({
 	className: 'item',
 	initialize: function () {
 		_(this).bindAll('render', 'remove', 'renderSetableChange', 'renderSetable');
-		this.model.bind('remove', this.remove);
-		this.model.bind('change:active', this.renderSetableChange);
+		this.model.on('remove', this.remove);
+		this.model.on('change:active', this.renderSetableChange);
 		this.el.id = this.model.get('id');
 	},
 	renderSetableChange: function (model, value){
@@ -149,9 +149,9 @@ var ItemView = Backbone.View.extend({
 	},
 	renderSetable: function (stateVal, stateName) {
 		if (this.model.get(stateName) === stateVal) {
-			$(this.el).addClass(stateName);
+			this.$el.addClass(stateName);
 		} else {
-			$(this.el).removeClass(stateName);
+			this.$el.removeClass(stateName);
 		}
 		return this;
 	},
@@ -187,7 +187,7 @@ var InventoryItemView = ItemView.extend({
 	},
 	render: function () {
 		ItemView.prototype.render.call(this);
-		$(this.el).attr('draggable', true);
+		this.$el.attr('draggable', true);
 		return this;
 	}
 });
@@ -196,11 +196,11 @@ var InteractableItemView = ItemView.extend({
 	initialize: function () {
 		ItemView.prototype.initialize.call(this);
 		_(this).bindAll('toggle','produce', 'open', 'renderState', 'showFailedToggle');
-		this.model.bind('change:state', this.renderState);
-		this.model.bind('change:open', this.renderSetableChange);
-		this.model.bind('failedToggleCondition', this.showFailedToggle);
+		this.model.on('change:state', this.renderState);
+		this.model.on('change:open', this.renderSetableChange);
+		this.model.on('failedToggleCondition', this.showFailedToggle);
 		if (this.model.has('produces')) {
-			this.model.bind('change:' + this.model.get('produces').on, this.produce);
+			this.model.on('change:' + this.model.get('produces').on, this.produce);
 		}
 		if (this.model.has('toggles')) {
 			this.events.click = 'toggle';
@@ -234,8 +234,8 @@ var InteractableItemView = ItemView.extend({
 		return this;
 	},
 	renderState: function () {
-		$(this.el).removeClass(this.model.previous('state'));
-		$(this.el).addClass(this.model.get('state'));
+		this.$el.removeClass(this.model.previous('state'));
+		this.$el.addClass(this.model.get('state'));
 		return this;
 	},
 	showFailedToggle: function (msg) {
@@ -267,7 +267,7 @@ var CombinableItemView = InteractableItemView.extend({
 	initialize: function () {
 		InteractableItemView.prototype.initialize.call(this);
 		_(this).bindAll('drop','dragEnter', 'dragLeave');
-		this.model.bind('change:' + _(this.model.get('sets')).keys()[0], this.renderSetableChange);
+		this.model.on('change:' + _(this.model.get('sets')).keys()[0], this.renderSetableChange);
 	},
 	render: function () {
 		InteractableItemView.prototype.render.call(this);
@@ -317,7 +317,7 @@ var StageView = Backbone.View.extend({
 	},
 	appendItem: function (item, View) {
 		var view = new View({el: '#' + item.id, model: item, collection: this.model.get('items')});
-		$(this.el).append(view.render().el);
+		this.$el.append(view.render().el);
 	}
 });
 
@@ -325,19 +325,19 @@ var ObjectiveView = Backbone.View.extend({
 	tagName: 'li',
 	initialize: function () {
 		_(this).bindAll('render', 'pickup', 'stateChange');
-		this.model.bind('change', this.render);
+		this.model.on('change', this.render);
 		if (this.model.has('pickup')) {
-			this.options.stageItems.get(this.model.get('object')).bind('pickup', this.pickup);
+			this.options.stageItems.get(this.model.get('object')).on('pickup', this.pickup);
 		}
 		if (this.model.has('var')) {
-			this.options.interactables.get(this.model.get('object')).bind('change:' + _(this.model.get('var')).keys()[0], this.stateChange);
+			this.options.interactables.get(this.model.get('object')).on('change:' + _(this.model.get('var')).keys()[0], this.stateChange);
 		}
 	},
 	render: function () {
 		if (this.model.get('isComplete')) {
-			$(this.el).addClass('met');
+			this.$el.addClass('met');
 		}
-		$(this.el).text(this.model.get('objectiveTitle'));
+		this.$el.text(this.model.get('objectiveTitle'));
 		return this;
 	},
 	pickup: function (item) {
@@ -349,7 +349,7 @@ var ObjectiveView = Backbone.View.extend({
 			key = _(al).keys()[0];
 		if (al[key] === changed[key]) {
 			this.model.set({isComplete: true});
-			what.unbind('change:' + key, this.stateChange);
+			what.off('change:' + key, this.stateChange);
 		}
 	}
 });
@@ -360,7 +360,7 @@ var ObjectivesListView = Backbone.View.extend({
 	initialize: function () {
 		_(this).bindAll('render', 'appendObjective');
 		this.collection = this.options.objectives;
-		this.collection.bind('add', this.appendObjective);
+		this.collection.on('add', this.appendObjective);
 	},
 	render: function () {
 		_(this.collection.models).each(function (objective) {
@@ -374,7 +374,7 @@ var ObjectivesListView = Backbone.View.extend({
 			model: objective,
 			stageItems: this.options.stageItems,
 			interactables: this.options.interactables});
-		$(this.el).append(objectiveView.render().el);
+		this.$el.append(objectiveView.render().el);
 		return this;
 	}
 });
@@ -401,7 +401,7 @@ var InventoryView = Backbone.View.extend({
 	},
 	render: function () {
 		var view = new InventoryItemsView({collection: this.model.get('items'), stage: this.options.stage});
-		$(this.el).append(view.render().el);
+		this.$el.append(view.render().el);
 		return this;
 	}
 });
@@ -411,9 +411,9 @@ var InventoryItemsView = Backbone.View.extend({
 	id: 'inventoryItems',
 	initialize: function () {
 		_(this).bindAll('render', 'renderItem', 'pickup');
-		this.collection.bind('add', this.renderItem);
+		this.collection.on('add', this.renderItem);
 		this.stageItems = this.options.stage.get('items');
-		this.stageItems.bind('pickup', this.pickup);
+		this.stageItems.on('pickup', this.pickup);
 	},
 	render: function () {
 		this.collection.each(this.renderItem);
@@ -424,7 +424,7 @@ var InventoryItemsView = Backbone.View.extend({
 			model: item,
 			inventoryItems: this.collection
 		});
-		$(this.el).append(view.render().el);
+		this.$el.append(view.render().el);
 		return this;
 	},
 	pickup: function (item) {
@@ -438,16 +438,16 @@ var DialogueView = Backbone.View.extend ({
 	id: 'dialogue',
 	initialize: function () {
 		_(this).bindAll('render', 'remove');
-		this.model.bind('remove', this.remove);
+		this.model.on('remove', this.remove);
 	},
 	render: function () {
-		$(this.el).text(this.model.get('message'));
+		this.$el.text(this.model.get('message'));
 		var tmp = function (model) {model.trigger('remove');};
 		_(tmp).delay(2000, this.model);
 		return this;
 	},
 	remove: function () {
-		$(this.el).fadeOut(400, function (e) {
+		this.$el.fadeOut(400, function (e) {
 			$(this).remove();
 		});
 	}
