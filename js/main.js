@@ -139,7 +139,6 @@ var ItemView = Backbone.View.extend({
 	className: 'item',
 	initialize: function () {
 		_(this).bindAll('render', 'remove', 'renderSetableChange', 'renderSetable');
-		//this.model.bind('change', this.render);
 		this.model.bind('remove', this.remove);
 		this.model.bind('change:active', this.renderSetableChange);
 		this.el.id = this.model.get('id');
@@ -165,21 +164,31 @@ var ItemView = Backbone.View.extend({
 var InventoryItemView = ItemView.extend({
 	tagName: 'li',
 	events: {
-		'combined': 'combined'
+		dragend: 'dragend',
+		dragstart: 'dragstart'
+	},
+	dragstart: function (e) {
+		var dt = e.originalEvent.dataTransfer;
+		dt.effectAllowed = 'all';
+		dt.dropEffect = 'link';
+		dt.setData('Text', this.id);
+		return true;
+	},
+	dragend: function (e) {
+		e.preventDefault();
+		if (e.originalEvent.dataTransfer.dropEffect == 'none'){
+			console.log('not it');
+		} else {
+			this.options.inventoryItems.remove(this.model);
+		}
 	},
 	initialize: function () {
-		//call parent init
 		ItemView.prototype.initialize.call(this);
-
-		//this.model.bind('remove', this.remove);
-		$(this.el).draggable({
-			containment: 'body',
-			zIndex: 200,
-			revert: 'invalid'
-		});
 	},
-	combined: function () {
-		this.options.inventoryItems.remove(this.model);
+	render: function () {
+		ItemView.prototype.render.call(this);
+		$(this.el).attr('draggable', true);
+		return this;
 	}
 });
 
@@ -194,7 +203,8 @@ var InteractableItemView = ItemView.extend({
 			this.model.bind('change:' + this.model.get('produces').on, this.produce);
 		}
 		if (this.model.has('toggles')) {
-			this.delegateEvents({'click': 'toggle'});
+			this.events.click = 'toggle';
+			this.delegateEvents(this.events);
 		}
 		if (this.model.has('events')) {
 			_(this.model.get('events')).each(function (val, key) {
@@ -235,17 +245,29 @@ var InteractableItemView = ItemView.extend({
 	}
 });
 var CombinableItemView = InteractableItemView.extend({
+	events: {
+		drop: 'drop',
+		dragenter: 'dragEnter',
+		dragleave: 'dragLeave',
+		dragover: 'dragOver'
+	},
+	dragOver: function (e) {
+		e.preventDefault();
+		return false;
+	},
+	dragEnter: function (e) {
+		e.preventDefault();
+		e.originalEvent.dataTransfer.dropEffect = 'move';
+		return false;
+	},
+	dragLeave: function (e) {
+		e.preventDefault();
+		return false;
+	},
 	initialize: function () {
 		InteractableItemView.prototype.initialize.call(this);
-		_(this).bindAll('drop');
+		_(this).bindAll('drop','dragEnter', 'dragLeave');
 		this.model.bind('change:' + _(this.model.get('sets')).keys()[0], this.renderSetableChange);
-		$(this.el).droppable({
-			drop: this.drop,
-			hoverClass: 'drophover'
-		});
-		if (this.model.has('accepts')) {
-			$(this.el).droppable('option', 'accept', '#' + this.model.get('accepts'));
-		}
 	},
 	render: function () {
 		InteractableItemView.prototype.render.call(this);
@@ -254,11 +276,13 @@ var CombinableItemView = InteractableItemView.extend({
 		}
 		return this;
 	},
-	drop: function (event, ui) {
+	drop: function (e, ui) {
+		if (e.stopPropagation) {
+			e.stopPropagation();
+		}
 		if (this.model.has('sets')) {
 			this.model.set(this.model.get('sets'));
 		}
-		$(ui.draggable).trigger('combined');
 		return this;
 	}
 });
@@ -358,6 +382,23 @@ var ObjectivesListView = Backbone.View.extend({
 var InventoryView = Backbone.View.extend({
 	id: 'inventory',
 	tagName: 'section',
+	//events: {
+		//drop: 'drop',
+		//dragenter: 'dragEnter',
+		//dragover: 'dragOver'
+	//},
+	dragOver: function (e) {
+		console.log('dragOver');
+		e.preventDefault();
+	},
+	dragEnter: function (e) {
+		e.preventDefault();
+		console.log('dragEnter');
+	},
+	drop: function (e) {
+		console.log('dropped');
+		e.preventDefault();
+	},
 	render: function () {
 		var view = new InventoryItemsView({collection: this.model.get('items'), stage: this.options.stage});
 		$(this.el).append(view.render().el);

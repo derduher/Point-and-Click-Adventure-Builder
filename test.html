@@ -1,0 +1,69 @@
+<!doctype html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title></title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- CSS concatenated and minified via ant build script-->
+  <link rel="stylesheet" href="css/style.css">
+  <link href='http://fonts.googleapis.com/css?family=Miltonian' rel='stylesheet'>
+  <!-- end CSS-->
+
+  <script src="js/libs/modernizr-2.0.6.min.js"></script>
+</head>
+
+<body>
+
+  <div id="container">
+    <header>A header with nothing in it.</header>
+    <div id="main" role="main">
+
+		<section id="inventory"></section>
+		<div id="stage">
+			<div id="door" class="closed item interactable"></div>
+			<div id="key" draggable=true class="item pickupItem"></div>
+			<div id="bed" class="item interactable">Bed</div>
+		</div>
+		<ol id="objectives">
+			<li id="pickupkey">pick up key</li>
+			<li id="unlockdoor">unlock door</li>
+			<li id="opendoor">open door</li>
+			<li id="wavepatrick">wave at patrick</li>
+		</ol>
+    </div>
+    <footer>A footer with nothing in it</footer>
+  </div> <!--! end of #container -->
+
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+  <script>window.jQuery || document.write('<script src="js/libs/jquery-1.7.1.min.js"><\/script>')</script>
+	  <!--need to check for jqueryui not jquery-->
+  <script>window.jQuery || document.write('<script src="js/mylibs/jquery-ui.min.js"><\/script>')</script>
+
+
+  <!-- scripts concatenated and minified via ant build script-->
+	<script defer src="js/plugins.js"></script>
+	<script src="js/mylibs/underscore.js"></script>
+	<script src="js/mylibs/json2.js"></script>
+	<!--<script src="js/mylibs/backbone.js"></script>-->
+	<!--<script defer src="js/main.js"></script>-->
+	<script src="js/mylibs/test.js"></script>
+  <!-- end scripts-->
+
+  <!--[if lt IE 7 ]>
+    <script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script>
+    <script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script>
+  <![endif]-->
+  
+</body>
+</html>
